@@ -70,7 +70,14 @@ public class FolderIcon extends FrameLayout implements FolderListener {
     private StylusEventHelper mStylusEventHelper;
 
     // The number of icons to display in the
-    public static final int NUM_ITEMS_IN_PREVIEW = 3;
+
+// wangjun add begin JEFF_RECT_FOLDER
+    //private static final int NUM_ITEMS_IN_PREVIEW = 3;
+    public static int NUM_ITEMS_IN_PREVIEW;
+    private static final int NUM_COLUMN_IN_PREVIEW = 2;
+    private static boolean jeff_is_rect_folder ;
+// wangjun add end
+
     private static final int CONSUMPTION_ANIMATION_DURATION = 100;
     private static final int DROP_IN_ANIMATION_DURATION = 400;
     private static final int INITIAL_ITEM_ANIMATION_DURATION = 350;
@@ -138,6 +145,16 @@ public class FolderIcon extends FrameLayout implements FolderListener {
     }
 
     private void init() {
+// wangjun add begin JEFF_RECT_FOLDER
+        jeff_is_rect_folder=getResources().getBoolean(R.bool.jeff_is_rect_folder);
+
+        if (jeff_is_rect_folder) {
+            NUM_ITEMS_IN_PREVIEW=4;
+        } else {
+            NUM_ITEMS_IN_PREVIEW=3;
+        }
+// wangjun add end
+
         mLongPressHelper = new CheckLongPressHelper(this);
         mStylusEventHelper = new StylusEventHelper(this);
         setAccessibilityDelegate(LauncherAppState.getInstance().getAccessibilityDelegate());
@@ -222,6 +239,9 @@ public class FolderIcon extends FrameLayout implements FolderListener {
         private ValueAnimator mAcceptAnimator;
         private ValueAnimator mNeutralAnimator;
 
+//wangjun add begin  JEFF_RECT_FOLDER
+	 public static int sAvailableIconSpace = -1;
+//wangjun add end
         public FolderRingAnimator(Launcher launcher, FolderIcon folderIcon) {
             mFolderIcon = folderIcon;
             Resources res = launcher.getResources();
@@ -240,6 +260,11 @@ public class FolderIcon extends FrameLayout implements FolderListener {
                 sSharedOuterRingDrawable = res.getDrawable(R.drawable.portal_ring_outer);
                 sSharedInnerRingDrawable = res.getDrawable(R.drawable.portal_ring_inner_nolip);
                 sSharedFolderLeaveBehind = res.getDrawable(R.drawable.portal_ring_rest);
+
+//wangjun add begin  JEFF_RECT_FOLDER
+                sAvailableIconSpace = res.getDimensionPixelSize(R.dimen.folder_available_icon_space);
+//wangjun add end
+
                 sStaticValuesDirty = false;
             }
         }
@@ -581,20 +606,46 @@ public class FolderIcon extends FrameLayout implements FolderListener {
 
     private PreviewItemDrawingParams computePreviewItemDrawingParams(int index,
             PreviewItemDrawingParams params) {
-        index = NUM_ITEMS_IN_PREVIEW - index - 1;
-        float r = (index * 1.0f) / (NUM_ITEMS_IN_PREVIEW - 1);
-        float scale = (1 - PERSPECTIVE_SCALE_FACTOR * (1 - r));
 
-        float offset = (1 - r) * mMaxPerspectiveShift;
-        float scaledSize = scale * mBaselineIconSize;
-        float scaleOffsetCorrection = (1 - scale) * mBaselineIconSize;
+// wangjun add begin JEFF_RECT_FOLDER
+        float transY;
+        float transX;
+        float totalScale;
+        final int overlayAlpha;
 
-        // We want to imagine our coordinates from the bottom left, growing up and to the
-        // right. This is natural for the x-axis, but for the y-axis, we have to invert things.
-        float transY = mAvailableSpaceInPreview - (offset + scaledSize + scaleOffsetCorrection) + getPaddingTop();
-        float transX = (mAvailableSpaceInPreview - scaledSize) / 2;
-        float totalScale = mBaselineIconScale * scale;
-        final int overlayAlpha = (int) (80 * (1 - r));
+        if (!jeff_is_rect_folder) {
+            index = NUM_ITEMS_IN_PREVIEW - index - 1;
+            float r = (index * 1.0f) / (NUM_ITEMS_IN_PREVIEW - 1);
+            float scale = (1 - PERSPECTIVE_SCALE_FACTOR * (1 - r));
+
+            float offset = (1 - r) * mMaxPerspectiveShift;
+            float scaledSize = scale * mBaselineIconSize;
+            float scaleOffsetCorrection = (1 - scale) * mBaselineIconSize;
+
+            // We want to imagine our coordinates from the bottom left, growing up and to the
+            // right. This is natural for the x-axis, but for the y-axis, we have to invert things.
+            transY = mAvailableSpaceInPreview - (offset + scaledSize + scaleOffsetCorrection) + getPaddingTop() - 3;
+            transX = (mAvailableSpaceInPreview - scaledSize) / 2;
+            //transX = offset + scaleOffsetCorrection;
+            totalScale = mBaselineIconScale * scale;
+            overlayAlpha = (int) (80 * (1 - r));
+        } else {
+            float mAvailableSpaceInFolderIcon = FolderRingAnimator.sAvailableIconSpace;
+            float itemPadding = 2;
+            float scaledSize = (mAvailableSpaceInFolderIcon - itemPadding * NUM_COLUMN_IN_PREVIEW) / NUM_COLUMN_IN_PREVIEW;
+            float scale = scaledSize / mIntrinsicIconSize;
+            float leftMargin = (mAvailableSpaceInPreview - mAvailableSpaceInFolderIcon) / 2-3;
+            Resources res = getResources();
+            int iconTopToFolderHeight = res.getDimensionPixelSize(R.dimen.folder_available_icon_height);
+            float topMarginY = (mAvailableSpaceInPreview - mAvailableSpaceInFolderIcon) / 2 + iconTopToFolderHeight +5;
+            int column = index % NUM_COLUMN_IN_PREVIEW;
+            int row = index / NUM_COLUMN_IN_PREVIEW;
+            transX = leftMargin + scaledSize * column + itemPadding * column + 4;
+            transY = topMarginY + scaledSize * row + itemPadding * row;
+            totalScale = scale;
+            overlayAlpha = 0;
+        }
+// wangjun add end
 
         if (params == null) {
             params = new PreviewItemDrawingParams(transX, transY, totalScale, overlayAlpha);

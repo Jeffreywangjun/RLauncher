@@ -103,4 +103,9 @@
     
     <!-- Unread support -->
     <bool name="config_unreadSupport">true</bool>
+
+<!-- wangjun add begin  JEFF_RECT_FOLDER-->
+    <bool name="jeff_is_rect_folder">true</bool>
+<!-- wangjun add end -->
+
 </resources>
